@@ -11,11 +11,21 @@ import {TransparentButton} from "./components/TransparentButton";
 import {Typography} from "./components/Typography";
 
 
+interface IUser {
+    id: string
+    first_name: string
+    last_name: string
+    email: string
+}
+
+
 function App() {
     const [isScanning, setIsScanning] = useState(false);
     const [devices, setDevices] = useState<CameraDevice[]>([]);
     const [selectedDevice, setSelectedDevice] = useState<CameraDevice>(devices[0]);
     const [scanResult, setScanResult] = useState<string>('');
+    const [user, setUser] = useState<IUser | undefined>(undefined);
+    const [isChecking, setIsChecking] = useState(false);
     
     useEffect(() => {
         if (devices.length > 0) {
@@ -23,10 +33,36 @@ function App() {
         }
     }, [devices]);
     
+    useEffect(() => {
+        if (scanResult.length > 0) {
+            setIsChecking(true);
+            fetch(`http://localhost:5000/api/v1/qrcodes`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*'
+                },
+                body: JSON.stringify({
+                    access_code: scanResult
+                })
+            }).then(res => res.json())
+              .then(data => {
+                  setUser(data.item)
+                  setIsChecking(false);
+              })
+              .catch(console.error)
+              .finally(() => {
+                  setIsChecking(false);
+              })
+        }
+    }, [scanResult])
+    
     const onSuccessScan = useCallback((decodedText: string, decodedResult: Html5QrcodeResult) => {
-        setScanResult(decodedText)
-        setIsScanning(false);
-    }, []);
+        if (scanResult !== decodedText) {
+            setScanResult(decodedText)
+            setIsScanning(false);
+        }
+    }, [scanResult]);
     
     const onErrorScan = useCallback((errorMessage: string, error: Html5QrcodeError) => {
         console.error(error)
@@ -105,9 +141,7 @@ function App() {
                         </select>
                     )}
                 </div>
-                {(
-                    selectedDevice && isScanning
-                ) && (
+                {selectedDevice && (
                     <Scanable
                         fps={2}
                         w={290}
@@ -120,12 +154,11 @@ function App() {
                         }}
                     />
                 )}
-                
                 {scanResult.length > 0 && (
                     <div
                         className={'scan-app__result'}
                         style={{
-                            marginTop: '5rem',
+                            marginTop: '3rem',
                             display: 'flex',
                             flexFlow: 'column',
                             justifyContent: 'center',
@@ -157,7 +190,56 @@ function App() {
                                 marginTop: '36px',
                             }}
                         >
-                            {scanResult}
+                            Code d'accès : {scanResult} <br/>
+                            {isChecking ? (
+                                <div
+                                    className={'scan-app__result'}
+                                    style={{
+                                        marginTop: '3rem',
+                                        display: 'flex',
+                                        flexFlow: 'column',
+                                        justifyContent: 'center',
+                                        alignItems: 'center',
+                                    }}
+                                >
+                                    <Typography
+                                        variant="span"
+                                        sx={{
+                                            fontSize: '14px',
+                                            lineHeight: '17px',
+                                            fontStyle: 'normal',
+                                            color: '#A4A2A2',
+                                            fontWeight: '500',
+                                            textAlign: 'center',
+                                            marginTop: '36px',
+                                        }}
+                                    >
+                                        Verification en cours...
+                                    </Typography>
+                                </div>
+                            ) : (
+                                 <>
+                                     Status :
+                                     <Typography
+                                         variant={'span'}
+                                         sx={{
+                                             fontSize: '20px',
+                                             lineHeight: '24px',
+                                             fontStyle: 'normal',
+                                             fontWeight: '700',
+                                             color: user ? '#00FF00' : '#FF0000',
+                                             marginLeft: '.5rem',
+                                         }}
+                                     >
+                                         {user ? 'OK' : 'Non OK'}
+                                     </Typography><br/>
+                                     {user && (
+                                         <span>
+                                             Nom complet : {user.first_name} {user.last_name} <br/>
+                                         </span>
+                                     )}
+                                 </>
+                             )}
                         </Typography>
                     </div>
                 )}

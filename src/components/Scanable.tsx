@@ -45,18 +45,17 @@ export const Scanable = ({
                 },
                 onSuccessScan,
                 onErrorScan
-            )
-                       .catch((err) => {
-                           console.error(err);
-                       });
+            ).catch((err) => {
+                console.error(err);
+            });
         }
         
         return () => {
-           if (html5QrCode.isScanning) {
-               html5QrCode.stop().then(() => {
-                   html5QrCode.clear();
-               }).catch(console.error);
-           }
+            if (html5QrCode.isScanning) {
+                html5QrCode.stop().then(() => {
+                    html5QrCode.clear();
+                }).catch(console.error);
+            }
         }
     }, [aspectRatio, cameraId, disableFlip, fps, h, onErrorScan, onSuccessScan, w]);
     
